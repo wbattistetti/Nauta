@@ -63,3 +63,13 @@ export function travelPeriodSummary(profile: UserProfile | undefined): string {
   if (profile.period) parts.push(profile.period);
   return parts.join(' · ');
 }
+
+/** Period line for chat header (destination already in title). */
+export function buildTripPeriodSubtitle(profile: UserProfile | undefined): string | null {
+  if (!profile) return null;
+  const parts: string[] = [];
+  if (profile.durationDays) parts.push(`${profile.durationDays} giorni`);
+  if (profile.period?.trim()) parts.push(profile.period.trim());
+  if (parts.length === 0) return null;
+  return `· ${parts.join(' · ')}`;
+}

@@ -31,9 +31,14 @@ export const PREFERENCES_BACK_TO_PROPOSAL_LABEL = 'indietro';
 
 export const STOP_PHOTOS_ACCORDION_LABEL = 'Ecco alcune foto…';
 
+/** @deprecated Use icon on itinerary accordion */
 export const RECALCULATE_TRIP_CHIP_LABEL = '⚠️ Ricalcola il viaggio';
 
+/** @deprecated Use icon on itinerary accordion */
 export const RECALCULATE_TRIP_BUTTON_LABEL = 'Ricalcola il viaggio';
+
+/** Screen reader label for itinerary refresh icon */
+export const RECALCULATE_ITINERARY_ARIA_LABEL = 'Ricalcola itinerario';
 
 export const ITINERARY_HISTORY_LABEL = 'Versioni precedenti';
 

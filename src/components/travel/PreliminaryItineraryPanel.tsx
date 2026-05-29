@@ -2,7 +2,6 @@
  * Itinerary stop list — embedded in planning accordion (no duplicate outer chrome).
  */
 import type { PendingReplacement, TravelStop, TravelPhase } from '../../types/travelState';
-import { RECALCULATE_TRIP_BUTTON_LABEL } from '../../lib/travel/itineraryCopy';
 import StopPhotosAccordion from './StopPhotosAccordion';
 
 const BADGE: Record<string, { label: string; className: string }> = {
@@ -17,8 +16,6 @@ type Props = {
   locked?: boolean;
   pendingReplacement?: PendingReplacement | null;
   onConfirm?: () => void;
-  onRecalculate?: () => void;
-  recalculateLoading?: boolean;
   onRequestReplace?: (stopId: string) => void;
   onPickReplacement?: (stopId: string, candidateId: string) => void;
   onCancelReplacement?: () => void;
@@ -29,8 +26,6 @@ export default function PreliminaryItineraryPanel({
   locked,
   pendingReplacement,
   onConfirm,
-  onRecalculate,
-  recalculateLoading,
   onRequestReplace,
   onPickReplacement,
   onCancelReplacement,
@@ -43,27 +38,15 @@ export default function PreliminaryItineraryPanel({
 
   return (
     <div className="space-y-3">
-      {!locked && (onConfirm || onRecalculate) ? (
-        <div className="flex flex-wrap justify-end gap-2">
-          {onRecalculate ? (
-            <button
-              type="button"
-              disabled={recalculateLoading}
-              onClick={onRecalculate}
-              className="text-xs px-3 py-1.5 rounded-full border border-amber-700/50 bg-amber-950/40 text-amber-100 font-medium hover:bg-amber-900/50 disabled:opacity-50"
-            >
-              {recalculateLoading ? 'Ricalcolo…' : RECALCULATE_TRIP_BUTTON_LABEL}
-            </button>
-          ) : null}
-          {onConfirm ? (
-            <button
-              type="button"
-              onClick={onConfirm}
-              className="text-xs px-3 py-1.5 rounded-full bg-teal-800 text-amber-50 font-medium"
-            >
-              Conferma itinerario
-            </button>
-          ) : null}
+      {!locked && onConfirm ? (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="text-xs px-3 py-1.5 rounded-full bg-teal-800 text-amber-50 font-medium"
+          >
+            Conferma itinerario
+          </button>
         </div>
       ) : null}
 

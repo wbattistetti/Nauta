@@ -67,6 +67,7 @@ export default function ChatPanel({
   scrollOnInlineSlot = false,
 }: ChatPanelProps) {
   const overlay = appearance === 'overlay';
+  const tripEdgeToEdge = overlay && mode === 'trip';
   const [input, setInput] = useState('');
   const lastMessageRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -104,17 +105,25 @@ export default function ChatPanel({
     }
   }
 
-  const shell = overlay
-    ? 'flex flex-col flex-1 min-h-0 rounded-2xl border border-stone-700/40 bg-stone-950/40 backdrop-blur-sm overflow-hidden'
-    : 'flex flex-col bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden min-h-[320px] max-h-[70vh]';
+  const shell = tripEdgeToEdge
+    ? 'flex flex-col flex-1 min-h-0 rounded-none border-0 bg-stone-950 overflow-hidden md:rounded-2xl md:border md:border-stone-800 md:shadow-lg md:shadow-black/30'
+    : overlay
+      ? 'flex flex-col flex-1 min-h-0 rounded-2xl border border-stone-800 bg-stone-950 overflow-hidden shadow-lg shadow-black/30'
+      : 'flex flex-col bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden min-h-[320px] max-h-[70vh]';
 
-  const scrollArea = overlay
-    ? 'flex-1 overflow-y-auto px-3 py-4 space-y-3 min-h-0'
-    : 'flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0';
+  const scrollArea = tripEdgeToEdge
+    ? 'flex-1 overflow-y-auto px-0 py-0 space-y-0 min-h-0 md:px-3 md:py-4 md:space-y-3'
+    : overlay
+      ? 'flex-1 overflow-y-auto px-3 py-4 space-y-3 min-h-0'
+      : 'flex-1 overflow-y-auto px-4 py-4 space-y-4 min-h-0';
 
-  const inputBar = overlay
-    ? 'px-3 py-3 border-t border-stone-700/50 bg-stone-950/60'
-    : 'px-4 py-3 border-t border-slate-100';
+  const bubbleGutter = tripEdgeToEdge ? 'px-4 space-y-3 py-3 md:px-0 md:py-0' : 'space-y-3';
+
+  const inputBar = tripEdgeToEdge
+    ? 'px-4 py-3 border-t border-stone-800 bg-stone-950 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:px-3 md:pb-3'
+    : overlay
+      ? 'px-3 py-3 border-t border-stone-800 bg-stone-950'
+      : 'px-4 py-3 border-t border-slate-100';
 
   const inputWrap = overlay
     ? 'flex items-end gap-2 bg-stone-900/80 border border-stone-600/50 rounded-2xl px-3 py-2 focus-within:border-teal-700/60'
@@ -134,34 +143,36 @@ export default function ChatPanel({
 
       <div className={scrollArea}>
         {priorRecapSlot}
-        {messages.map((msg, index) => (
-          <div
-            key={msg.id}
-            ref={index === messages.length - 1 ? lastMessageRef : undefined}
-          >
-            <WaMessageRow msg={msg} />
-          </div>
-        ))}
-
-        {loading && (
-          <div className="flex justify-start">
-            <div className="bg-stone-800/90 rounded-2xl rounded-bl-md px-3.5 py-3 flex items-center gap-2 border border-stone-700/40">
-              <Loader2 size={14} className="text-teal-400 animate-spin" />
-              <span className="text-xs text-stone-400">...</span>
+        <div className={bubbleGutter}>
+          {messages.map((msg, index) => (
+            <div
+              key={msg.id}
+              ref={index === messages.length - 1 ? lastMessageRef : undefined}
+            >
+              <WaMessageRow msg={msg} />
             </div>
-          </div>
-        )}
+          ))}
 
-        {error && (
-          <div className="flex items-start gap-2 px-1">
-            <AlertCircle size={14} className="text-rose-400 shrink-0 mt-0.5" />
-            <p className="text-xs text-rose-300 leading-snug">{error}</p>
-          </div>
-        )}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="bg-stone-800/90 rounded-2xl rounded-bl-md px-3.5 py-3 flex items-center gap-2 border border-stone-700/40">
+                <Loader2 size={14} className="text-teal-400 animate-spin" />
+                <span className="text-xs text-stone-400">...</span>
+              </div>
+            </div>
+          )}
 
-        {footerSlot && <div className="pt-1">{footerSlot}</div>}
+          {error && (
+            <div className="flex items-start gap-2">
+              <AlertCircle size={14} className="text-rose-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-rose-300 leading-snug">{error}</p>
+            </div>
+          )}
 
-        {inlineSlot ? <div className="pt-2 pb-1">{inlineSlot}</div> : null}
+          {footerSlot && <div className="pt-1">{footerSlot}</div>}
+        </div>
+
+        {inlineSlot ? <div>{inlineSlot}</div> : null}
 
         <div ref={bottomRef} />
       </div>

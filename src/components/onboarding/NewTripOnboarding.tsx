@@ -14,7 +14,6 @@ import {
   chatInputPlaceholder,
   syncUiFromTravelState,
   travelPhaseFromState,
-  travelPhaseLabel,
   ITINERARY_PROPOSAL_CHAT_SHORT,
 } from '../../lib/travel/travelUi';
 import { AI_ERROR_MESSAGE } from '../../lib/trip/tripConstants';
@@ -27,11 +26,8 @@ import {
   tripDisplayLabel,
   tripRecordToDraft,
 } from '../../lib/tripService';
-import {
-  buildChatHistoryRecap,
-  buildChatHistoryRecapPreview,
-  sliceSessionChatMessages,
-} from '../../lib/travel/chatHistoryRecap';
+import { buildChatHistoryRecap, sliceSessionChatMessages } from '../../lib/travel/chatHistoryRecap';
+import { buildTripPeriodSubtitle } from '../../lib/travel/planningSummary';
 import {
   buildTripItineraryContextLine,
   CURRENT_ITINERARY_VERSION_ID,
@@ -47,6 +43,7 @@ import TripPlanningAccordions from '../travel/TripPlanningAccordions';
 import type { UserProfile } from '../../types/travelState';
 import TripDayPanel from '../trip/TripDayPanel';
 import ChatTripBackground from './ChatTripBackground';
+import TripChatHeader from '../travel/TripChatHeader';
 import { APP_STICKY_HEADER_PX } from '../../lib/layout';
 
 function assistantMessage(content: string): ChatMessage {
@@ -192,47 +189,10 @@ export default function NewTripOnboarding() {
     travelState && syncUiFromTravelState(travelState).showTripPlanningUI
   );
 
-  const tripContextLine = buildTripItineraryContextLine(travelState);
-  const chatHeaderTopSlot = (
-    <div className="text-center py-1.5 px-1">
-      {tripContextLine ? (
-        <p className="text-sm sm:text-base font-semibold text-amber-50/95 tracking-wide">
-          {tripContextLine}
-        </p>
-      ) : (
-        <p className="text-xs font-normal text-amber-500/80">
-          {travelPhaseLabel(travelPhase, travelState?.profile)}
-        </p>
-      )}
-    </div>
-  );
-
-  const priorChatRecapPreview = buildChatHistoryRecapPreview(
-    travelState?.profile,
-    archivedPriorMessages.length
-  );
-  const priorChatRecapBody = buildChatHistoryRecap(
-    archivedPriorMessages,
-    travelState?.profile,
-    {
-      hasItinerary: (travelState?.itinerary.stops.length ?? 0) > 0,
-      itineraryStopCount: travelState?.itinerary.stops.length,
-    }
-  );
-  const priorRecapSlot =
-    archivedPriorMessages.length > 0 ? (
-      <ChatPriorRecapAccordion
-        previewLine={priorChatRecapPreview}
-        recapBody={priorChatRecapBody}
-        open={priorRecapOpen}
-        onToggle={() => setPriorRecapOpen((v) => !v)}
-      />
-    ) : null;
-
   const handleProfilePanelChange = useCallback(
     (patch: Partial<UserProfile>) => {
       if (microFeedbackTimer.current) clearTimeout(microFeedbackTimer.current);
-      setPanelMicroFeedback('Preferenza aggiornata — ricalcolo l\'itinerario…');
+      setPanelMicroFeedback('Preferenza aggiornata');
       microFeedbackTimer.current = setTimeout(() => setPanelMicroFeedback(null), 2800);
 
       pendingProfilePatch.current = {
@@ -297,6 +257,41 @@ export default function NewTripOnboarding() {
       setRecalculateLoading(false);
     }
   }, [tripId, applyItineraryActionResult]);
+
+  const tripContextLine = buildTripItineraryContextLine(travelState);
+  const itineraryStaleHeader =
+    Boolean(travelState?.itineraryStale) &&
+    !travelState?.locked &&
+    (travelState?.itinerary.stops.length ?? 0) > 0;
+
+  const tripHeroTitleChip = tripContextLine ? (
+    <TripChatHeader
+      variant="chip"
+      title={tripContextLine}
+      subtitle={buildTripPeriodSubtitle(travelState?.profile)}
+      itineraryStale={itineraryStaleHeader}
+      onRecalculate={tripId ? () => void handleRecalculateItinerary() : undefined}
+      recalculateLoading={recalculateLoading}
+      recalculateDisabled={aiLoading || !tripId}
+    />
+  ) : null;
+
+  const priorChatRecapBody = buildChatHistoryRecap(
+    archivedPriorMessages,
+    travelState?.profile,
+    {
+      hasItinerary: (travelState?.itinerary.stops.length ?? 0) > 0,
+      itineraryStopCount: travelState?.itinerary.stops.length,
+    }
+  );
+  const priorRecapSlot =
+    archivedPriorMessages.length > 0 ? (
+      <ChatPriorRecapAccordion
+        recapBody={priorChatRecapBody}
+        open={priorRecapOpen}
+        onToggle={() => setPriorRecapOpen((v) => !v)}
+      />
+    ) : null;
 
   const handleMenuItineraryVersion = useCallback(
     async (targetTripId: string, versionId: string) => {
@@ -454,10 +449,17 @@ export default function NewTripOnboarding() {
       )}
 
       {chatStarted && (
-        <div className="relative flex flex-col" style={{ height: chatHeight }}>
-          <ChatTripBackground />
+        <div className="relative flex flex-col bg-stone-950" style={{ height: chatHeight }}>
+          <div className="relative h-[34dvh] min-h-[160px] max-h-[280px] shrink-0 overflow-hidden">
+            <ChatTripBackground destination={travelState?.profile.destination} variant="hero" />
+            {tripHeroTitleChip ? (
+              <div className="absolute inset-x-0 top-0 z-10 px-3 pt-3 pointer-events-none flex justify-center">
+                <div className="pointer-events-auto w-full">{tripHeroTitleChip}</div>
+              </div>
+            ) : null}
+          </div>
 
-          <div className="relative z-10 flex flex-col flex-1 min-h-0 max-w-2xl mx-auto w-full px-3 py-3">
+          <div className="relative z-10 flex flex-col flex-1 min-h-0 w-full max-w-2xl mx-auto px-0 pt-0 pb-0 bg-stone-950 md:px-3 md:pt-2 md:pb-3">
             {showDayPanels && draft.itinerary?.days?.length ? (
               <div className="space-y-3 overflow-y-auto max-h-[45vh] shrink-0">
                 {draft.itinerary.days.map((d) => (
@@ -470,7 +472,7 @@ export default function NewTripOnboarding() {
               </div>
             ) : null}
 
-            <div className="flex flex-col flex-1 min-h-0 gap-3">
+            <div className="flex flex-col flex-1 min-h-0 gap-0 md:gap-3">
               <ChatPanel
                 mode="trip"
                 variant="embedded"
@@ -486,7 +488,6 @@ export default function NewTripOnboarding() {
                 onVoiceStart={startListening}
                 onVoiceStop={stopListening}
                 scrollOnInlineSlot={false}
-                topSlot={chatHeaderTopSlot}
                 priorRecapSlot={priorRecapSlot}
                 inlineSlot={
                   showTripPlanningUI && travelState ? (
@@ -502,8 +503,6 @@ export default function NewTripOnboarding() {
                           "Confermo l'itinerario, procedi con il dettaglio giorno per giorno."
                         )
                       }
-                      onRecalculateItinerary={() => void handleRecalculateItinerary()}
-                      recalculateLoading={recalculateLoading}
                       onRequestReplace={(stopId) => {
                         const name =
                           travelState.itinerary.stops.find((s) => s.id === stopId)?.name ??

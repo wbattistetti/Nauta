@@ -55,3 +55,26 @@
     background: #4b5563;
   }
 }
+
+/* Itinerary stale — refresh icon hint */
+@keyframes nauta-recalc-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    color: rgb(252 211 77 / 0.95);
+  }
+  50% {
+    opacity: 0.45;
+    color: rgb(251 191 36 / 0.7);
+  }
+}
+
+.nauta-recalc-pulse {
+  animation: nauta-recalc-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nauta-recalc-pulse {
+    animation: none;
+  }
+}
