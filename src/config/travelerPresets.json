@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "defaultPresetId": "balanced",
+  "rules": [
+    {
+      "id": "family_35_50",
+      "match": { "travelerType": "family", "ageBand": "35-50" },
+      "preset": {
+        "likes": ["nature", "historic_sites", "museums", "relax", "family"],
+        "dislikes": ["nightlife", "adrenaline"],
+        "style": "lento",
+        "budget": "medio"
+      }
+    },
+    {
+      "id": "family_50_plus",
+      "match": { "travelerType": "family", "ageBand": "50+" },
+      "preset": {
+        "likes": ["nature", "museums", "relax", "wellness", "family"],
+        "dislikes": ["nightlife", "adrenaline"],
+        "style": "lento",
+        "budget": "medio"
+      }
+    },
+    {
+      "id": "couples_25_35",
+      "match": { "travelerType": "couples", "ageBand": "25-35" },
+      "preset": {
+        "likes": ["museums", "local_food", "beach", "architecture", "couples"],
+        "dislikes": [],
+        "style": "equilibrato",
+        "budget": "medio"
+      }
+    },
+    {
+      "id": "couples_35_50",
+      "match": { "travelerType": "couples", "ageBand": "35-50" },
+      "preset": {
+        "likes": ["museums", "local_food", "wine", "architecture", "couples"],
+        "style": "equilibrato",
+        "budget": "alto"
+      }
+    },
+    {
+      "id": "friends_18_25",
+      "match": { "travelerType": "friends", "ageBand": "18-25" },
+      "preset": {
+        "likes": ["trekking", "outdoor_sports", "nightlife", "street_food", "friends"],
+        "dislikes": ["museums"],
+        "style": "intenso",
+        "budget": "economico"
+      }
+    },
+    {
+      "id": "friends_25_35",
+      "match": { "travelerType": "friends", "ageBand": "25-35" },
+      "preset": {
+        "likes": ["trekking", "nightlife", "local_food", "exploration", "friends"],
+        "dislikes": [],
+        "style": "intenso",
+        "budget": "medio"
+      }
+    },
+    {
+      "id": "solo_40_60",
+      "match": { "travelerType": "solo", "ageBand": "35-50" },
+      "preset": {
+        "likes": ["museums", "nature", "historic_sites", "cafes", "solo"],
+        "dislikes": ["nightlife"],
+        "style": "equilibrato",
+        "budget": "medio"
+      }
+    },
+    {
+      "id": "solo_50_plus",
+      "match": { "travelerType": "solo", "ageBand": "50+" },
+      "preset": {
+        "likes": ["museums", "nature", "architecture", "relax", "solo"],
+        "dislikes": ["nightlife", "adrenaline"],
+        "style": "lento",
+        "budget": "medio"
+      }
+    }
+  ],
+  "defaultPreset": {
+    "likes": ["nature", "museums", "local_food"],
+    "dislikes": [],
+    "style": "equilibrato",
+    "budget": "medio"
+  }
+}

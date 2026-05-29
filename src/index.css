@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Menu viaggi: cestino visibile sulla riga selezionata (tap / click) */
+.trip-menu-row .trip-menu-delete-btn {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.trip-menu-row.trip-menu-selected .trip-menu-delete-btn,
+.trip-menu-row.trip-menu-confirming .trip-menu-delete-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Allow POI pin bodies to extend outside their 1x1 anchor div */
+.trip-poi-icon {
+  overflow: visible !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+@layer base {
+  * {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.01em;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #d1d5db;
+    border-radius: 99px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9ca3af;
+  }
+
+  .dark-scroll::-webkit-scrollbar-thumb {
+    background: #374151;
+  }
+  .dark-scroll::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+  }
+}
