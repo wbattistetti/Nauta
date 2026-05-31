@@ -1,5 +1,5 @@
 /**
- * Curated destination photo sets for the trip chat background carousel.
+ * Curated destination photo sets — instant client fallback while live photos load.
  */
 
 export type DestinationPhoto = {
@@ -56,13 +56,13 @@ function destinationKey(name: string): string {
     .replace(/^_|_$/g, '');
 }
 
-/** Photos for a trip destination (region or country name). */
+/** Photos for a trip destination (region or country name). Known regions only — others load via API. */
 export function photosForDestination(destination: string | null | undefined): DestinationPhoto[] {
-  if (!destination?.trim()) return BY_DESTINATION.default;
+  if (!destination?.trim()) return [];
   const key = destinationKey(destination);
   for (const [k, photos] of Object.entries(BY_DESTINATION)) {
     if (k === 'default') continue;
     if (key.includes(k) || k.includes(key)) return photos;
   }
-  return BY_DESTINATION.default;
+  return [];
 }

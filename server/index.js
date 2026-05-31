@@ -10,6 +10,7 @@ import { tripsRouter } from './routes/trips.js';
 import { aiChatRouter } from './routes/aiChat.js';
 import { travelRouter } from './routes/travel.js';
 import { aiCostRouter } from './services/aiCost/aiCostRoutes.js';
+import { photosRouter } from './routes/photos.js';
 import { syncPricingFromOpenRouter } from './services/aiCost/pricingSync.js';
 import { getUsdToEur } from './services/aiCost/exchangeRateSync.js';
 
@@ -29,6 +30,7 @@ app.get('/api/health', async (_req, res) => {
       db: dbOk,
       handler: 'nauta-server',
       openai: Boolean(process.env.OPENAI_API_KEY),
+      unsplash: Boolean(process.env.UNSPLASH_ACCESS_KEY),
       model: process.env.OPENAI_MODEL ?? 'gpt-4.1',
     });
   } catch (e) {
@@ -39,6 +41,7 @@ app.get('/api/health', async (_req, res) => {
 app.use('/api/trips', tripsRouter);
 app.use('/api/ai-chat', aiChatRouter);
 app.use('/api/travel', travelRouter);
+app.use('/api/photos', photosRouter);
 app.use('/api/ai-calls', aiCostRouter);
 
 async function bootstrapCostCaches() {
@@ -65,6 +68,7 @@ app.listen(PORT, async () => {
   console.log(`  trips      /api/trips`);
   console.log(`  ai-chat    POST /api/ai-chat`);
   console.log(`  travel     POST /api/travel/:tripId/message`);
+  console.log(`  photos     GET /api/photos/destination  POST /api/photos/resolve`);
   console.log(`  ai-calls   GET /api/ai-calls`);
   bootstrapCostCaches();
 });

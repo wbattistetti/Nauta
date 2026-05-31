@@ -7,6 +7,7 @@ import {
   BUDGET_OPTIONS,
   STYLE_OPTIONS,
 } from './preferenceOptions';
+import { profilePeriodLabel } from './periodFormat';
 
 const themeLabel = new Map(ALL_THEME_OPTIONS.map((o) => [o.id, o.label]));
 
@@ -60,7 +61,8 @@ export function travelPeriodSummary(profile: UserProfile | undefined): string {
   const parts: string[] = [];
   if (profile.destination) parts.push(profile.destination);
   if (profile.durationDays) parts.push(`${profile.durationDays} giorni`);
-  if (profile.period) parts.push(profile.period);
+  const period = profilePeriodLabel(profile);
+  if (period) parts.push(period);
   return parts.join(' · ');
 }
 
@@ -69,7 +71,8 @@ export function buildTripPeriodSubtitle(profile: UserProfile | undefined): strin
   if (!profile) return null;
   const parts: string[] = [];
   if (profile.durationDays) parts.push(`${profile.durationDays} giorni`);
-  if (profile.period?.trim()) parts.push(profile.period.trim());
+  const period = profilePeriodLabel(profile);
+  if (period) parts.push(period);
   if (parts.length === 0) return null;
   return `· ${parts.join(' · ')}`;
 }

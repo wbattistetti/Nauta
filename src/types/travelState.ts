@@ -89,6 +89,12 @@ export type UserProfile = {
   period?: string;
   periodStart?: string;
   periodEnd?: string;
+  /** Approximate window vs fixed departure dates. */
+  periodFlexible?: boolean;
+  /** Extra days allowed before periodStart. */
+  periodStartToleranceDays?: number;
+  /** Extra days allowed after periodEnd. */
+  periodEndToleranceDays?: number;
   /** Who travels — used for panel presets (distinct from theme `family`/`solo` chips). */
   travelerType?: TravelerType;
   ageBand?: AgeBand;

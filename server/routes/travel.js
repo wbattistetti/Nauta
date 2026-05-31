@@ -19,6 +19,7 @@ import {
   restoreItineraryVersion,
   ensureItineraryHistoryFields,
 } from '../travel/itineraryHistory.js';
+import { reopenItinerary } from '../travel/reopenItinerary.js';
 
 export const travelRouter = Router();
 
@@ -148,6 +149,49 @@ travelRouter.post('/:tripId/itinerary/restore', async (req, res) => {
     });
   } catch (e) {
     console.error('POST restore', e);
+    res.status(500).json({ error: String(e.message) });
+  }
+});
+
+travelRouter.post('/:tripId/itinerary/reopen', async (req, res) => {
+  try {
+    const tripId = req.params.tripId;
+    const { rows } = await pool.query(`SELECT * FROM trips WHERE id = $1`, [tripId]);
+    if (!rows[0]) return res.status(404).json({ error: 'Viaggio non trovato' });
+
+    const row = rows[0];
+    let travelState = row.travel_state;
+    if (!travelState?.version) travelState = createInitialTravelState();
+
+    reopenItinerary(travelState);
+    sanitizeTravelState(travelState);
+
+    const draft = {
+      ...(row.draft ?? {}),
+      itinerary: null,
+      currentDay: undefined,
+    };
+
+    const { rows: updated } = await pool.query(
+      `UPDATE trips SET
+        travel_state = $2::jsonb,
+        draft = $3::jsonb,
+        itinerary = NULL,
+        itinerary_status = 'draft',
+        updated_at = NOW()
+      WHERE id = $1
+      RETURNING *`,
+      [tripId, JSON.stringify(travelState), JSON.stringify(draft)]
+    );
+
+    res.json({
+      travel_state: travelState,
+      showItineraryPanel: shouldShowItineraryPanel(travelState),
+      showDayPanels: false,
+      trip: rowToTrip(updated[0]),
+    });
+  } catch (e) {
+    console.error('POST reopen', e);
     res.status(500).json({ error: String(e.message) });
   }
 });

@@ -2,6 +2,7 @@
  * Coerce UserProfile fields from AI/DB — avoids .trim() on non-strings.
  */
 import { normalizeThemeList } from './themes.js';
+import { normalizeTravelPeriod, formatPeriodFromIsoWithTolerance } from './periodNormalize.js';
 
 /** @param {unknown} value */
 export function asOptionalString(value) {
@@ -72,6 +73,14 @@ function normalizeAgeBand(v) {
   return undefined;
 }
 
+/** @param {unknown} value @param {number} max */
+function asToleranceDays(value, max = 14) {
+  if (value == null || value === '') return undefined;
+  const n = Math.floor(Number(value));
+  if (!Number.isFinite(n) || n <= 0) return undefined;
+  return Math.min(n, max);
+}
+
 /** @param {import('./types.js').UserProfile|Record<string, unknown>} profile */
 export function sanitizeUserProfile(profile) {
   const p = profile ?? {};
@@ -84,13 +93,39 @@ export function sanitizeUserProfile(profile) {
 
   const travelerType = normalizeTravelerType(p.travelerType);
   const ageBand = normalizeAgeBand(p.ageBand);
+  const periodFlexible =
+    p.periodFlexible === true ||
+    asToleranceDays(p.periodStartToleranceDays) != null ||
+    asToleranceDays(p.periodEndToleranceDays) != null;
+
+  const normalizedPeriod = normalizeTravelPeriod({
+    period,
+    periodStart,
+    periodEnd,
+    periodFlexible,
+  });
+
+  const startTol = asToleranceDays(p.periodStartToleranceDays);
+  const endTol = asToleranceDays(p.periodEndToleranceDays);
+  let displayPeriod = normalizedPeriod.period;
+  if (normalizedPeriod.periodStart && normalizedPeriod.periodEnd && (startTol || endTol)) {
+    displayPeriod = formatPeriodFromIsoWithTolerance(
+      normalizedPeriod.periodStart,
+      normalizedPeriod.periodEnd,
+      true,
+      { startTol, endTol }
+    );
+  }
 
   return {
     destination: asOptionalString(p.destination),
     durationDays: asDurationDays(p.durationDays),
-    period,
-    periodStart,
-    periodEnd,
+    period: displayPeriod,
+    periodStart: normalizedPeriod.periodStart,
+    periodEnd: normalizedPeriod.periodEnd,
+    periodFlexible: normalizedPeriod.periodFlexible || startTol != null || endTol != null,
+    periodStartToleranceDays: startTol,
+    periodEndToleranceDays: endTol,
     travelerType,
     ageBand,
     preferencesPresetId: asOptionalString(p.preferencesPresetId),

@@ -59,6 +59,7 @@ export type TravelProfilePatchResult = {
 export type TravelItineraryActionResult = {
   travel_state: TravelState;
   showItineraryPanel: boolean;
+  showDayPanels?: boolean;
   itineraryStale?: boolean;
   trip: TripRecord;
 };
@@ -98,5 +99,16 @@ export async function restoreItineraryVersion(
   return apiJson<TravelItineraryActionResult>(`/api/travel/${tripId}/itinerary/restore`, {
     method: 'POST',
     body: JSON.stringify({ versionId }),
+  });
+}
+
+/** Unlock confirmed itinerary — back to Scopri / Controlla accordions. */
+export async function reopenTravelItinerary(tripId: string): Promise<TravelItineraryActionResult> {
+  if (!useTravelAgent()) {
+    throw new Error('Travel Agent richiede VITE_USE_LOCAL_API=true');
+  }
+  return apiJson<TravelItineraryActionResult>(`/api/travel/${tripId}/itinerary/reopen`, {
+    method: 'POST',
+    body: JSON.stringify({}),
   });
 }

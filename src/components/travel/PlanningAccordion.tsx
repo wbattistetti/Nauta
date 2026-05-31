@@ -2,7 +2,7 @@
  * Flat planning accordions — full-width divider headers, no nested boxes.
  */
 import type { ReactNode } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, ThumbsDown } from 'lucide-react';
 
 /** Full-bleed on mobile; card frame from md up. */
 export const PLANNING_PANEL_SHELL =
@@ -20,17 +20,25 @@ export function PlanningPanelBody({ children, className = '' }: { children: Reac
 export function PlanningAccordionSection({
   children,
   highlighted,
+  tone,
   sectionRef,
 }: {
   children: ReactNode;
   highlighted?: boolean;
+  tone?: 'liked' | 'disliked';
   sectionRef?: (el: HTMLElement | null) => void;
 }) {
+  const toneClass =
+    tone === 'liked'
+      ? 'bg-emerald-950/25'
+      : tone === 'disliked'
+        ? 'bg-red-950/20'
+        : highlighted
+          ? 'bg-emerald-950/15'
+          : undefined;
+
   return (
-    <section
-      ref={sectionRef}
-      className={highlighted ? 'bg-emerald-950/15 transition-colors duration-300' : undefined}
-    >
+    <section ref={sectionRef} className={`transition-colors duration-300 ${toneClass ?? ''}`.trim()}>
       {children}
     </section>
   );
@@ -38,6 +46,7 @@ export function PlanningAccordionSection({
 
 export function PlanningAccordionHeader({
   title,
+  titleNode,
   subtitle,
   open,
   onToggle,
@@ -46,8 +55,12 @@ export function PlanningAccordionHeader({
   actionLabel,
   onAction,
   titleAction,
+  trailingAction,
+  feedbackTone,
 }: {
   title: string;
+  /** Rich title (overrides plain title when set). */
+  titleNode?: ReactNode;
   subtitle?: string;
   open: boolean;
   onToggle: () => void;
@@ -57,7 +70,25 @@ export function PlanningAccordionHeader({
   onAction?: () => void;
   /** Icon or control beside the title (e.g. recalculate). */
   titleAction?: ReactNode;
+  /** Extra control on header row (e.g. Conferma itinerario). */
+  trailingAction?: ReactNode;
+  /** Visual state after thumbs up/down on itinerary row. */
+  feedbackTone?: 'liked' | 'disliked';
 }) {
+  const toggleToneClass =
+    feedbackTone === 'liked'
+      ? 'bg-emerald-950/45 hover:bg-emerald-950/55 ring-1 ring-inset ring-emerald-700/50'
+      : feedbackTone === 'disliked'
+        ? 'bg-red-950/40 hover:bg-red-950/50 ring-1 ring-inset ring-red-800/45'
+        : 'bg-transparent hover:bg-amber-950/25';
+
+  const feedbackIcon =
+    feedbackTone === 'liked' ? (
+      <Check size={16} strokeWidth={2.5} className="shrink-0 text-emerald-400" aria-hidden />
+    ) : feedbackTone === 'disliked' ? (
+      <ThumbsDown size={16} strokeWidth={2.5} className="shrink-0 text-red-400" aria-hidden />
+    ) : null;
+
   return (
     <div className="flex w-full items-stretch min-h-[2.75rem]">
       <button
@@ -65,11 +96,14 @@ export function PlanningAccordionHeader({
         onClick={onToggle}
         disabled={disabled}
         aria-expanded={open}
-        className={`flex-1 min-w-0 flex items-center justify-between gap-2 ${PLANNING_ROW_X} py-3 text-left bg-transparent hover:bg-amber-950/25 transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
+        className={`flex-1 min-w-0 flex items-center justify-between gap-2 ${PLANNING_ROW_X} py-3 text-left transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${toggleToneClass}`}
       >
         <span className="min-w-0 flex-1 pr-2">
           <span className="flex items-center gap-1.5">
-            <span className="text-sm font-medium text-amber-50 leading-snug">{title}</span>
+            {feedbackIcon}
+            {titleNode ?? (
+              <span className="text-sm font-medium text-amber-50 leading-snug">{title}</span>
+            )}
             {titleAction}
           </span>
           {subtitle ? (
@@ -90,6 +124,19 @@ export function PlanningAccordionHeader({
           />
         </span>
       </button>
+      {trailingAction ? (
+        <div
+          className={`shrink-0 self-stretch flex items-center pr-2 border-l pl-2 transition-colors ${
+            feedbackTone === 'liked'
+              ? 'border-emerald-800/40 bg-emerald-950/45'
+              : feedbackTone === 'disliked'
+                ? 'border-red-800/40 bg-red-950/40'
+                : 'border-amber-900/25 self-center'
+          }`}
+        >
+          {trailingAction}
+        </div>
+      ) : null}
       {actionLabel && onAction ? (
         <button
           type="button"

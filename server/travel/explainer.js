@@ -34,6 +34,8 @@ export function shouldUseDeterministicReply(state, clarifications) {
   return false;
 }
 
+import { formatPeriodFromIso } from './periodNormalize.js';
+
 /**
  * @param {import('./types.js').UserProfile} profile
  */
@@ -42,10 +44,9 @@ function travelFactsConfirmPrefix(profile) {
   if (profile.destination) bits.push(`viaggio in ${profile.destination}`);
   if (profile.durationDays) bits.push(`di ${profile.durationDays} giorni`);
   const period =
-    profile.period ||
     (profile.periodStart && profile.periodEnd
-      ? `${profile.periodStart} – ${profile.periodEnd}`
-      : '');
+      ? formatPeriodFromIso(profile.periodStart, profile.periodEnd, profile.periodFlexible === true)
+      : '') || profile.period || '';
   if (period) bits.push(period);
   if (!bits.length) return '';
   return `Perfetto, ${bits.join(' ')}. `;

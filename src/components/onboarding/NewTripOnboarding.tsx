@@ -5,6 +5,7 @@ import {
   patchTravelProfile,
   recalculateTravelItinerary,
   restoreItineraryVersion,
+  reopenTravelItinerary,
   sendTravelMessage,
   travelStateFromRecord,
   useTravelAgent,
@@ -16,6 +17,7 @@ import {
   travelPhaseFromState,
   ITINERARY_PROPOSAL_CHAT_SHORT,
 } from '../../lib/travel/travelUi';
+import { ITINERARY_REOPEN_LABEL } from '../../lib/travel/itineraryCopy';
 import { AI_ERROR_MESSAGE } from '../../lib/trip/tripConstants';
 import {
   chatMessagesFromRecord,
@@ -43,7 +45,15 @@ import TripPlanningAccordions from '../travel/TripPlanningAccordions';
 import type { UserProfile } from '../../types/travelState';
 import TripDayPanel from '../trip/TripDayPanel';
 import ChatTripBackground from './ChatTripBackground';
+import { useTripPhotos } from '../../lib/travel/useTripPhotos';
 import TripChatHeader from '../travel/TripChatHeader';
+import {
+  buildHeroPhotoCaption,
+  buildStopFocusChipTitle,
+  type ExplorerHeroContext,
+} from '../../lib/travel/heroTitle';
+import { needsPeriodSelection } from '../../lib/travel/periodFormat';
+import ChatDateRangePicker from '../chat/ChatDateRangePicker';
 import { APP_STICKY_HEADER_PX } from '../../lib/layout';
 
 function assistantMessage(content: string): ChatMessage {
@@ -76,6 +86,11 @@ export default function NewTripOnboarding() {
   const [archivedPriorMessages, setArchivedPriorMessages] = useState<ChatMessage[]>([]);
   const archivedPriorCountRef = useRef(0);
   const [priorRecapOpen, setPriorRecapOpen] = useState(false);
+  const [heroCtx, setHeroCtx] = useState<ExplorerHeroContext>({
+    mode: 'trip',
+    stop: null,
+    photoIndex: 0,
+  });
 
   const travelPhase = travelPhaseFromState(travelState);
   const emptyProfile: UserProfile = { likes: [], dislikes: [] };
@@ -189,6 +204,9 @@ export default function NewTripOnboarding() {
     travelState && syncUiFromTravelState(travelState).showTripPlanningUI
   );
 
+  const activeDayNumber =
+    draft.currentDay ?? draft.itinerary?.days?.[0]?.day ?? 1;
+
   const handleProfilePanelChange = useCallback(
     (patch: Partial<UserProfile>) => {
       if (microFeedbackTimer.current) clearTimeout(microFeedbackTimer.current);
@@ -235,14 +253,51 @@ export default function NewTripOnboarding() {
   );
 
   const applyItineraryActionResult = useCallback(
-    (result: { travel_state: TravelState; showItineraryPanel?: boolean; trip: TripRecord }) => {
+    (result: {
+      travel_state: TravelState;
+      showItineraryPanel?: boolean;
+      showDayPanels?: boolean;
+      trip: TripRecord;
+    }) => {
       const ui = syncUiFromTravelState(result.travel_state);
       setTravelState(ui.travelState);
       setShowItineraryPanel(result.showItineraryPanel ?? ui.showItineraryPanel);
+      setShowDayPanels(result.showDayPanels ?? ui.showDayPanels);
       setDraft(tripRecordToDraft(result.trip));
     },
     []
   );
+
+  const handleReopenItinerary = useCallback(async () => {
+    if (!tripId) return;
+    setRecalculateLoading(true);
+    setProfilePatchError(null);
+    try {
+      const result = await reopenTravelItinerary(tripId);
+      applyItineraryActionResult(result);
+    } catch (e) {
+      setProfilePatchError(e instanceof Error ? e.message : 'Impossibile riaprire l\'itinerario');
+    } finally {
+      setRecalculateLoading(false);
+    }
+  }, [tripId, applyItineraryActionResult]);
+
+  const dayPanelSlot =
+    showDayPanels && (draft.itinerary?.days?.length ?? 0) > 0 ? (
+      <div className="space-y-2">
+        <div className="flex items-center justify-end px-1">
+          <button
+            type="button"
+            onClick={() => void handleReopenItinerary()}
+            disabled={recalculateLoading || aiLoading || !tripId}
+            className="text-xs font-medium text-amber-400/90 hover:text-amber-200 underline underline-offset-2 decoration-amber-600/50 disabled:opacity-50"
+          >
+            {ITINERARY_REOPEN_LABEL}
+          </button>
+        </div>
+        <TripDayPanel embedded draft={draft} dayNumber={activeDayNumber} />
+      </div>
+    ) : null;
 
   const handleRecalculateItinerary = useCallback(async () => {
     if (!tripId) return;
@@ -258,19 +313,66 @@ export default function NewTripOnboarding() {
     }
   }, [tripId, applyItineraryActionResult]);
 
+  const handleHeroContextChange = useCallback((ctx: ExplorerHeroContext) => {
+    setHeroCtx((prev) => {
+      if (ctx.mode === 'trip') {
+        return { mode: 'trip', stop: null, photoIndex: 0 };
+      }
+      const stopChanged = ctx.stop?.id !== prev.stop?.id;
+      return {
+        mode: 'stop',
+        stop: ctx.stop,
+        photoIndex: stopChanged ? 0 : prev.photoIndex,
+      };
+    });
+  }, []);
+
+  const showDatePicker = Boolean(
+    chatStarted && travelState && needsPeriodSelection(travelState.profile)
+  );
+
   const tripContextLine = buildTripItineraryContextLine(travelState);
+  const stopFocus = heroCtx.mode === 'stop' && heroCtx.stop;
+  const { carouselPhotos, photoAt } = useTripPhotos({
+    destination: travelState?.profile.destination,
+    stops: travelState?.itinerary.stops ?? [],
+    stopFocus: Boolean(stopFocus),
+    stopName: heroCtx.stop?.name,
+    stopRegion: heroCtx.stop?.region,
+    enabled: chatStarted,
+  });
+  const currentHeroPhoto = photoAt(heroCtx.photoIndex);
+
   const itineraryStaleHeader =
     Boolean(travelState?.itineraryStale) &&
     !travelState?.locked &&
     (travelState?.itinerary.stops.length ?? 0) > 0;
 
-  const tripHeroTitleChip = tripContextLine ? (
+  const chipTitle =
+    stopFocus && heroCtx.stop && currentHeroPhoto
+      ? buildStopFocusChipTitle(
+          travelState?.profile.destination,
+          heroCtx.stop.name,
+          currentHeroPhoto.alt
+        )
+      : tripContextLine;
+
+  const chipSubtitle = stopFocus ? null : buildTripPeriodSubtitle(travelState?.profile);
+
+  const heroPhotoCaption =
+    stopFocus && heroCtx.stop && currentHeroPhoto
+      ? buildHeroPhotoCaption(heroCtx.stop.name, currentHeroPhoto.alt)
+      : null;
+
+  const tripHeroTitleChip = chipTitle ? (
     <TripChatHeader
       variant="chip"
-      title={tripContextLine}
-      subtitle={buildTripPeriodSubtitle(travelState?.profile)}
-      itineraryStale={itineraryStaleHeader}
-      onRecalculate={tripId ? () => void handleRecalculateItinerary() : undefined}
+      title={chipTitle}
+      subtitle={chipSubtitle}
+      itineraryStale={!stopFocus && itineraryStaleHeader}
+      onRecalculate={
+        !stopFocus && tripId ? () => void handleRecalculateItinerary() : undefined
+      }
       recalculateLoading={recalculateLoading}
       recalculateDisabled={aiLoading || !tripId}
     />
@@ -451,27 +553,30 @@ export default function NewTripOnboarding() {
       {chatStarted && (
         <div className="relative flex flex-col bg-stone-950" style={{ height: chatHeight }}>
           <div className="relative h-[34dvh] min-h-[160px] max-h-[280px] shrink-0 overflow-hidden">
-            <ChatTripBackground destination={travelState?.profile.destination} variant="hero" />
+            <ChatTripBackground
+              photos={carouselPhotos}
+              stopFocus={Boolean(stopFocus)}
+              photoIndex={stopFocus ? heroCtx.photoIndex : undefined}
+              onPhotoIndexChange={
+                stopFocus
+                  ? (i) => setHeroCtx((prev) => ({ ...prev, photoIndex: i }))
+                  : undefined
+              }
+              interactive={Boolean(stopFocus)}
+            />
             {tripHeroTitleChip ? (
               <div className="absolute inset-x-0 top-0 z-10 px-3 pt-3 pointer-events-none flex justify-center">
                 <div className="pointer-events-auto w-full">{tripHeroTitleChip}</div>
               </div>
             ) : null}
+            {heroPhotoCaption ? (
+              <div className="absolute inset-x-0 bottom-0 z-10 px-4 pb-3 pointer-events-none">
+                <p className="text-xs font-medium text-amber-100/95 drop-shadow-md">{heroPhotoCaption}</p>
+              </div>
+            ) : null}
           </div>
 
           <div className="relative z-10 flex flex-col flex-1 min-h-0 w-full max-w-2xl mx-auto px-0 pt-0 pb-0 bg-stone-950 md:px-3 md:pt-2 md:pb-3">
-            {showDayPanels && draft.itinerary?.days?.length ? (
-              <div className="space-y-3 overflow-y-auto max-h-[45vh] shrink-0">
-                {draft.itinerary.days.map((d) => (
-                  <TripDayPanel
-                    key={d.day}
-                    draft={{ ...draft, currentDay: d.day }}
-                    dayNumber={d.day}
-                  />
-                ))}
-              </div>
-            ) : null}
-
             <div className="flex flex-col flex-1 min-h-0 gap-0 md:gap-3">
               <ChatPanel
                 mode="trip"
@@ -490,8 +595,19 @@ export default function NewTripOnboarding() {
                 scrollOnInlineSlot={false}
                 priorRecapSlot={priorRecapSlot}
                 inlineSlot={
-                  showTripPlanningUI && travelState ? (
-                    <TripPlanningAccordions
+                  dayPanelSlot ?? (
+                    <>
+                      {showDatePicker ? (
+                        <ChatDateRangePicker
+                          durationDays={travelState?.profile.durationDays}
+                          disabled={aiLoading || !tripId}
+                          onConfirm={(payload) => {
+                            handleProfilePanelChange(payload);
+                          }}
+                        />
+                      ) : null}
+                      {showTripPlanningUI && travelState ? (
+                        <TripPlanningAccordions
                       travelState={travelState}
                       travelPhase={travelPhase}
                       panelMicroFeedback={panelMicroFeedback}
@@ -525,8 +641,11 @@ export default function NewTripOnboarding() {
                       onCancelReplacement={() =>
                         setTravelState((s) => (s ? { ...s, pendingReplacement: null } : s))
                       }
+                      onHeroContextChange={handleHeroContextChange}
                     />
-                  ) : null
+                      ) : null}
+                    </>
+                  )
                 }
               />
             </div>
