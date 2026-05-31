@@ -11,6 +11,7 @@
  * @property {string[]} themes
  * @property {string} primaryTheme
  * @property {string} [notes]
+ * @property {{ label: string, wikiTitle: string, wikiSection?: string, sectionTitle?: string }[]} [placeLinks]
  * @property {StopCompatibility} [compatibility]
  */
 

@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import { reopenItinerary } from './reopenItinerary.js';
 
 describe('reopenItinerary', () => {
@@ -17,9 +18,9 @@ describe('reopenItinerary', () => {
 
     reopenItinerary(state);
 
-    expect(state.locked).toBe(false);
-    expect(state.travel_phase).toBe('phase3');
-    expect(state.itinerary.days).toEqual([]);
+    assert.equal(state.locked, false);
+    assert.equal(state.travel_phase, 'phase3');
+    assert.deepEqual(state.itinerary.days, []);
   });
 
   it('no-op when already unlocked', () => {
@@ -34,7 +35,7 @@ describe('reopenItinerary', () => {
 
     reopenItinerary(state);
 
-    expect(state.travel_phase).toBe('phase2');
-    expect(state.locked).toBe(false);
+    assert.equal(state.travel_phase, 'phase2');
+    assert.equal(state.locked, false);
   });
 });

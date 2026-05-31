@@ -35,21 +35,28 @@ export function shouldUseDeterministicReply(state, clarifications) {
 }
 
 import { formatPeriodFromIso } from './periodNormalize.js';
+import {
+  buildTravelFactsRecapPrefix,
+  TRAVELER_TYPE_QUESTION,
+  AGE_BAND_QUESTION,
+} from '@nauta/shared/travelFactsRecap';
+import {
+  buildDestinationAckMessage,
+  followUpAfterDestinationPhotos,
+  resolveDestinationAckMessage,
+} from './destinationAck.js';
+
+export { DURATION_FOLLOW_UP } from './destinationAck.js';
 
 /**
  * @param {import('./types.js').UserProfile} profile
  */
 function travelFactsConfirmPrefix(profile) {
-  const bits = [];
-  if (profile.destination) bits.push(`viaggio in ${profile.destination}`);
-  if (profile.durationDays) bits.push(`di ${profile.durationDays} giorni`);
   const period =
     (profile.periodStart && profile.periodEnd
       ? formatPeriodFromIso(profile.periodStart, profile.periodEnd, profile.periodFlexible === true)
       : '') || profile.period || '';
-  if (period) bits.push(period);
-  if (!bits.length) return '';
-  return `Perfetto, ${bits.join(' ')}. `;
+  return buildTravelFactsRecapPrefix({ ...profile, period: period || profile.period });
 }
 
 /**
@@ -59,9 +66,29 @@ function travelFactsConfirmPrefix(profile) {
  * @param {string} tripId
  * @param {boolean} [resuming]
  */
-export async function runExplainer(userMessage, state, clarifications, tripId, resuming = false) {
+export async function runExplainer(
+  userMessage,
+  state,
+  clarifications,
+  tripId,
+  resuming = false,
+  options = {}
+) {
+  const { destinationJustSet = false, previousState = null } = options;
+  const dest = state.profile.destination?.trim();
+
+  if (destinationJustSet && dest && !state.profile.durationDays) {
+    return {
+      reply: resolveDestinationAckMessage(dest),
+      followUpAfterPhotos: followUpAfterDestinationPhotos(state, true),
+    };
+  }
+
   if (shouldUseDeterministicReply(state, clarifications)) {
-    return { reply: buildFallbackReply(state, clarifications) };
+    return {
+      reply: buildFallbackReply(state, clarifications, { destinationJustSet, previousState }),
+      followUpAfterPhotos: followUpAfterDestinationPhotos(state, destinationJustSet),
+    };
   }
 
   let extra = '';
@@ -83,14 +110,30 @@ export async function runExplainer(userMessage, state, clarifications, tripId, r
   const reply =
     typeof parsed?.reply === 'string' && parsed.reply.trim()
       ? parsed.reply.trim()
-      : buildFallbackReply(state, clarifications);
+      : buildFallbackReply(state, clarifications, { destinationJustSet, previousState });
 
-  return { reply };
+  return {
+    reply,
+    followUpAfterPhotos: followUpAfterDestinationPhotos(state, destinationJustSet),
+  };
 }
 
-/** @param {import('./types.js').TravelState} state @param {string[]} clarifications */
-export function buildFallbackReply(state, clarifications) {
-  if (clarifications.length) return clarifications[0];
+/** @param {import('./types.js').TravelState} state @param {string[]} clarifications @param {{ destinationJustSet?: boolean, previousState?: import('./types.js').TravelState|null }} [options] */
+export function buildFallbackReply(state, clarifications, options = {}) {
+  const { destinationJustSet = false } = options;
+  const dest = state.profile.destination?.trim();
+
+  if (destinationJustSet && dest && !state.profile.durationDays) {
+    return resolveDestinationAckMessage(dest);
+  }
+
+  if (clarifications.length) {
+    const isDurationQ = /quanti giorni|durata|giorni a disposizione/i.test(clarifications[0]);
+    if (dest && !state.profile.durationDays && isDurationQ) {
+      return resolveDestinationAckMessage(dest);
+    }
+    return clarifications[0];
+  }
 
   if (state.itinerary.stops.length > 0 && !state.locked) {
     return ITINERARY_PROPOSAL_CHAT_SHORT;
@@ -104,10 +147,10 @@ export function buildFallbackReply(state, clarifications) {
 
   const confirm = travelFactsConfirmPrefix(state.profile);
   if (!state.profile.travelerType) {
-    return `${confirm}Viaggi da solo, in coppia, in famiglia o con amici?`.trim();
+    return confirm ? `${confirm} ${TRAVELER_TYPE_QUESTION}` : TRAVELER_TYPE_QUESTION;
   }
   if (!state.profile.ageBand) {
-    return 'Quale fascia d’età ti rappresenta? (es. 18–25, 25–35, 35–50, 50+)';
+    return confirm ? `${confirm} ${AGE_BAND_QUESTION}` : AGE_BAND_QUESTION;
   }
 
   if (isReadyForItineraryGeneration(state.profile) && !state.itinerary.stops.length) {

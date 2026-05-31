@@ -1,6 +1,7 @@
 /**
  * Wikimedia Commons image search — free, no API key, worldwide places.
  */
+import { isRejectedTravelPhotoText } from './photoQuery.js';
 
 const WIKIMEDIA_API = 'https://commons.wikimedia.org/w/api.php';
 
@@ -28,6 +29,8 @@ function mapPage(page) {
     'Travel photo';
 
   const alt = altRaw.length > 120 ? `${altRaw.slice(0, 117)}…` : altRaw;
+
+  if (isRejectedTravelPhotoText(alt)) return null;
 
   return {
     id: `wiki-${page.pageid}`,

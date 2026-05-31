@@ -1,7 +1,7 @@
 /**
  * Traveler profile → preference panel presets (configurable JSON).
  */
-import presetsJson from '../../config/travelerPresets.json';
+import presetsJson from '../../../packages/shared/config/travelerPresets.json';
 import type { TravelThemeId, UserProfile } from '../../types/travelState';
 
 export type TravelerType = 'solo' | 'couples' | 'family' | 'friends';

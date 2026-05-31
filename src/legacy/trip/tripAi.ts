@@ -1,5 +1,5 @@
-/**
- * Calls Nauta API — AI dialog manager on every turn.
+﻿/**
+ * Calls Nauta API ÔÇö AI dialog manager on every turn.
  */
 import { apiUrl, useLocalApi } from '../apiClient';
 import { buildIntakeContext } from './dialogOrchestrator';

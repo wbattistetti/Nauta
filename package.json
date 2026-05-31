@@ -1,18 +1,24 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "nauta-client",
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "vite",
-    "dev:server": "npm run dev --prefix server",
-    "dev:all": "npm run dev:server & npm run dev",
-    "build": "vite build",
+    "build:shared": "npm run build --workspace=@nauta/shared",
+    "dev": "npm run build:shared && vite",
+    "dev:server": "npm run build:shared && npm run dev --prefix server",
+    "dev:all": "npm run build:shared && npm run dev:server & npm run dev",
+    "build": "npm run build:shared && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "npm run build:shared && tsc --noEmit -p tsconfig.app.json",
+    "test:shared": "npm run test --workspace=@nauta/shared"
   },
   "dependencies": {
+    "@nauta/shared": "workspace:*",
     "@supabase/supabase-js": "^2.57.4",
     "@types/leaflet": "^1.9.21",
     "leaflet": "^1.9.4",

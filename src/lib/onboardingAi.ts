@@ -1,2 +1,2 @@
-/** @deprecated Use lib/trip/tripAi.ts */
-export { callOnboardingAi, callTripAi } from './trip/tripAi';
+/** @deprecated Legacy F1–F7 — excluded from typecheck (see src/legacy/). */
+export {};

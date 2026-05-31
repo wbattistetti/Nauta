@@ -1,6 +1,7 @@
 /** PostgreSQL pool for Nauta. */
 import pg from 'pg';
 import dotenv from 'dotenv';
+import { deriveDraftFromTravelState } from '@nauta/shared/deriveDraft';
 import { sanitizeTravelState } from './travel/profileSanitize.js';
 
 dotenv.config();
@@ -23,12 +24,18 @@ export async function checkDb() {
 
 /** Maps DB row → API TripRecord shape. */
 export function rowToTrip(row) {
-  const draft = row.draft ?? {};
   let travelState = row.travel_state ?? {};
   if (travelState?.version === 1 && travelState.profile) {
     travelState = structuredClone(travelState);
     sanitizeTravelState(travelState);
   }
+
+  const draft = deriveDraftFromTravelState(travelState, {
+    draft: row.draft ?? {},
+    itinerary: row.itinerary ?? null,
+    current_day: row.current_day ?? null,
+  });
+
   return {
     id: row.id,
     phase: row.phase,

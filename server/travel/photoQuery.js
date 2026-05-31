@@ -2,24 +2,32 @@
  * Search query builders for worldwide destination and stop photo lookup.
  */
 import { resolvePlaceForSearch } from './placeAliases.js';
+import { iconicSearchQueries } from './iconicDestinationPhotos.js';
+
+import { normalizePlaceKey } from '@nauta/shared/normalizePlaceKey';
 
 /** Normalize a place name into a stable cache key. */
-export function normalizePlaceKey(value) {
-  return String(value ?? '')
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_|_$/g, '');
+export { normalizePlaceKey };
+
+/** First iconic query for a destination (compat). */
+export function destinationSearchQuery(place) {
+  return iconicSearchQueries(place)[0] ?? 'famous travel landmark scenic';
 }
 
-/** Unsplash query for a region or country (generic mood). */
-export function destinationSearchQuery(place) {
-  const trimmed = String(place ?? '').trim();
-  if (!trimmed) return 'travel landscape';
-  const searchPlace = resolvePlaceForSearch(trimmed);
-  return `${searchPlace} travel landscape`;
+export { iconicSearchQueries as destinationSearchQueries };
+
+/**
+ * Alt/description patterns that are not destination hero photos (atlases, maps, etc.).
+ * @param {string} text
+ */
+export function isRejectedTravelPhotoText(text) {
+  const t = String(text ?? '').trim();
+  if (!t) return false;
+  return REJECTED_PHOTO_ALT.test(t);
 }
+
+const REJECTED_PHOTO_ALT =
+  /\b(atlas|atlante|atlante geografico|geography book|map book|old map|vintage map|cartography|textbook|encyclopedia|dictionary|globe collection|mappa del mondo|world map|libro di geografia)\b/i;
 
 /**
  * Unsplash query for a specific stop anywhere in the world.
@@ -42,7 +50,7 @@ export function stopSearchQuery(stopName, region, destination) {
     parts.push(resolvePlaceForSearch(destTrim));
   }
 
-  parts.push('travel');
+  parts.push('landmark iconic tourism');
   return parts.join(' ');
 }
 

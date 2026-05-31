@@ -1,6 +1,9 @@
 import { useState, useRef, useEffect, type ReactNode } from 'react';
 import { Send, Loader2, AlertCircle, Mic, MicOff } from 'lucide-react';
 import type { ChatMessage } from '../../types/trip';
+import ItineraryProposalChatBubble, {
+  isItineraryProposalMessage,
+} from '../travel/ItineraryProposalChatBubble';
 
 export type ChatPanelProps = {
   mode: 'trip' | 'onboarding' | 'planner';
@@ -26,10 +29,29 @@ export type ChatPanelProps = {
   inlineSlot?: ReactNode;
   /** When true, auto-scroll only on new messages — not when inlineSlot updates. */
   scrollOnInlineSlot?: boolean;
+  /** Blocks send and dims input (e.g. pending scope selection). */
+  inputDisabled?: boolean;
+  /** Clickable links in the itinerary proposal assistant message. */
+  itineraryProposalActions?: {
+    onOpenItinerary: () => void;
+    onOpenPreferences: () => void;
+    itineraryDisabled?: boolean;
+  };
 };
 
-function WaMessageRow({ msg }: { msg: ChatMessage }) {
+function WaMessageRow({
+  msg,
+  itineraryProposalActions,
+}: {
+  msg: ChatMessage;
+  itineraryProposalActions?: ChatPanelProps['itineraryProposalActions'];
+}) {
   const isUser = msg.role === 'user';
+  const showProposal =
+    !isUser &&
+    itineraryProposalActions &&
+    isItineraryProposalMessage(msg.content);
+
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
@@ -39,7 +61,15 @@ function WaMessageRow({ msg }: { msg: ChatMessage }) {
             : 'bg-stone-800/95 text-amber-50/95 rounded-2xl rounded-bl-md border border-stone-700/50'
         }`}
       >
-        {msg.content}
+        {showProposal ? (
+          <ItineraryProposalChatBubble
+            onOpenItinerary={itineraryProposalActions.onOpenItinerary}
+            onOpenPreferences={itineraryProposalActions.onOpenPreferences}
+            itineraryDisabled={itineraryProposalActions.itineraryDisabled}
+          />
+        ) : (
+          msg.content
+        )}
       </div>
     </div>
   );
@@ -65,6 +95,8 @@ export default function ChatPanel({
   priorRecapSlot,
   inlineSlot,
   scrollOnInlineSlot = false,
+  inputDisabled = false,
+  itineraryProposalActions,
 }: ChatPanelProps) {
   const overlay = appearance === 'overlay';
   const tripEdgeToEdge = overlay && mode === 'trip';
@@ -92,7 +124,7 @@ export default function ChatPanel({
 
   function submit() {
     const text = input.trim();
-    if (!text || loading) return;
+    if (!text || loading || inputDisabled) return;
     onVoiceStop?.();
     setInput('');
     onSend(text);
@@ -149,7 +181,7 @@ export default function ChatPanel({
               key={msg.id}
               ref={index === messages.length - 1 ? lastMessageRef : undefined}
             >
-              <WaMessageRow msg={msg} />
+              <WaMessageRow msg={msg} itineraryProposalActions={itineraryProposalActions} />
             </div>
           ))}
 
@@ -177,7 +209,7 @@ export default function ChatPanel({
         <div ref={bottomRef} />
       </div>
 
-      <div className={`${inputBar} shrink-0`}>
+      <div className={`${inputBar} shrink-0 ${inputDisabled ? 'opacity-50 pointer-events-none' : ''}`}>
         <div className={inputWrap}>
           {voiceEnabled && voiceSupported && (
             <button

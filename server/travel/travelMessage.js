@@ -16,6 +16,7 @@ import { applyOrchestrator } from './orchestrator.js';
 import { runReasoner } from './reasoner.js';
 import { runPlanner } from './planner.js';
 import { runExplainer, buildFallbackReply } from './explainer.js';
+import { destinationJustSet, followUpAfterDestinationPhotos } from './destinationAck.js';
 import { buildTripItineraryFromTravelState } from './logisticsBuilder.js';
 import { sanitizeTravelState } from './profileSanitize.js';
 import { buildReasonerFallback } from './reasonerFallback.js';
@@ -143,7 +144,16 @@ async function processTravelMessageInner({
     afterOrch = await maybeAutoGenerateStops(afterOrch, tripId);
   }
 
-  const { reply } = await runExplainer(userMessage, afterOrch, clarifications, tripId, resuming);
+  const justSetDestination = destinationJustSet(afterOrch, state);
+
+  const { reply, followUpAfterPhotos } = await runExplainer(
+    userMessage,
+    afterOrch,
+    clarifications,
+    tripId,
+    resuming,
+    { destinationJustSet: justSetDestination, previousState: state }
+  );
 
   const tp = afterOrch.travel_phase;
   /** @type {ItineraryStatus} */
@@ -161,6 +171,7 @@ async function processTravelMessageInner({
 
   return {
     reply,
+    followUpAfterPhotos: followUpAfterPhotos ?? null,
     travel_state: afterOrch,
     travel_phase: tp,
     itinerary_status: itineraryStatus,
@@ -199,12 +210,21 @@ async function processTravelMessageDegraded({
     afterOrch.profile
   );
 
-  let reply = buildFallbackReply(afterOrch, clarifications);
+  const justSetDestination = destinationJustSet(afterOrch, state);
+
+  let reply = buildFallbackReply(afterOrch, clarifications, {
+    destinationJustSet: justSetDestination,
+  });
+  let followUpAfterPhotos = followUpAfterDestinationPhotos(afterOrch, justSetDestination);
   try {
-    const explained = await runExplainer(userMessage, afterOrch, clarifications, '', resuming);
+    const explained = await runExplainer(userMessage, afterOrch, clarifications, '', resuming, {
+      destinationJustSet: justSetDestination,
+      previousState: state,
+    });
     if (explained?.reply?.trim()) reply = explained.reply.trim();
+    if (explained?.followUpAfterPhotos) followUpAfterPhotos = explained.followUpAfterPhotos;
   } catch {
-    /* keep buildFallbackReply — runExplainer also short-circuits on traveler step */
+    /* keep buildFallbackReply */
   }
 
   const tp = afterOrch.travel_phase;
@@ -213,6 +233,7 @@ async function processTravelMessageDegraded({
 
   return {
     reply,
+    followUpAfterPhotos: followUpAfterPhotos ?? null,
     travel_state: afterOrch,
     travel_phase: tp,
     itinerary_status: 'draft',

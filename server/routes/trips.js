@@ -1,6 +1,7 @@
 /** REST routes for trips (Postgres). */
 import { randomUUID } from 'crypto';
 import { Router } from 'express';
+import { TRAVEL_OPENER } from '@nauta/shared/constants';
 import { pool, rowToTrip } from '../db.js';
 import { createInitialTravelState } from '../travel/defaultState.js';
 
@@ -65,8 +66,7 @@ tripsRouter.post('/:id/reset-onboarding', async (req, res) => {
       {
         id: randomUUID(),
         role: 'assistant',
-        content:
-          'Ciao! Dimmi dove vorresti andare, per quanti giorni e in che periodo.',
+        content: TRAVEL_OPENER,
       },
     ];
     const { rows } = await pool.query(

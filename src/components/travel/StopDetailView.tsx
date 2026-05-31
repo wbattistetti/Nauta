@@ -1,11 +1,15 @@
 /**
  * Single stop detail — text and actions only (photos live in top hero band).
  */
+import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { PendingReplacement, TravelStop, UserProfile } from '../../types/travelState';
 import { buildStopDetailHeadline } from '../../lib/travel/stopDetailHeadline';
 import { STOP_NAV_NEXT_LABEL, STOP_NAV_PREV_LABEL } from '../../lib/travel/itineraryCopy';
 import { PLANNING_ROW_X } from './PlanningAccordion';
+import StopNotesBody from './StopNotesBody';
+import WikipediaPlaceSheet from './WikipediaPlaceSheet';
+import type { WikipediaPlaceTarget } from '../../lib/travel/wikipediaSummary';
 
 const BADGE: Record<string, { label: string; className: string }> = {
   salvabile: { label: 'Ok', className: 'bg-emerald-900/60 text-emerald-200' },
@@ -47,6 +51,15 @@ export default function StopDetailView({
   const badge = stop.compatibility ? BADGE[stop.compatibility] : null;
   const isPending = pendingReplacement?.stopId === stop.id;
   const showNav = Boolean(onPrev && onNext && (hasPrev || hasNext));
+  const [wikiTarget, setWikiTarget] = useState<WikipediaPlaceTarget | null>(null);
+
+  const handlePlaceLinkClick = useCallback((target: WikipediaPlaceTarget) => {
+    setWikiTarget(target);
+  }, []);
+
+  useEffect(() => {
+    setWikiTarget(null);
+  }, [stop.id]);
 
   const headline = buildStopDetailHeadline(stop, index, stops, profile);
 
@@ -65,7 +78,11 @@ export default function StopDetailView({
         </div>
 
         {stop.notes ? (
-          <p className="text-sm text-amber-100/90 leading-relaxed pl-6">{stop.notes}</p>
+          <StopNotesBody
+            notes={stop.notes}
+            placeLinks={stop.placeLinks}
+            onPlaceLinkClick={handlePlaceLinkClick}
+          />
         ) : (
           <p className="text-sm text-amber-500/75 leading-relaxed pl-6 italic">
             Tappa in bilanciamento con le tue preferenze e i tempi di viaggio.
@@ -135,6 +152,12 @@ export default function StopDetailView({
           </div>
         ) : null}
       </div>
+
+      <WikipediaPlaceSheet
+        open={wikiTarget !== null}
+        target={wikiTarget}
+        onClose={() => setWikiTarget(null)}
+      />
     </article>
   );
 }

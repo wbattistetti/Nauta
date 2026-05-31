@@ -1,6 +1,7 @@
 /**
  * Unsplash Search API client for travel hero photos.
  */
+import { isRejectedTravelPhotoText } from './photoQuery.js';
 
 const UNSPLASH_SEARCH = 'https://api.unsplash.com/search/photos';
 
@@ -20,6 +21,8 @@ function mapPhoto(photo) {
     (typeof photo.alt_description === 'string' && photo.alt_description.trim()) ||
     (typeof photo.description === 'string' && photo.description.trim()) ||
     'Travel photo';
+
+  if (isRejectedTravelPhotoText(alt)) return null;
 
   return {
     id: String(photo.id),
@@ -44,7 +47,7 @@ export async function searchUnsplashPhotos(query, perPage = 8) {
 
   const url = new URL(UNSPLASH_SEARCH);
   url.searchParams.set('query', query);
-  url.searchParams.set('per_page', String(Math.min(Math.max(perPage, 1), 15)));
+  url.searchParams.set('per_page', String(Math.min(Math.max(perPage + 4, 1), 15)));
   url.searchParams.set('orientation', 'landscape');
   url.searchParams.set('order_by', 'relevant');
   url.searchParams.set('content_filter', 'high');
@@ -60,7 +63,7 @@ export async function searchUnsplashPhotos(query, perPage = 8) {
 
   const data = await res.json();
   const results = Array.isArray(data?.results) ? data.results : [];
-  const photos = results.map(mapPhoto).filter(Boolean);
+  const photos = results.map(mapPhoto).filter(Boolean).slice(0, perPage);
 
   return { photos, live: true };
 }

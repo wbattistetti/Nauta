@@ -1,4 +1,4 @@
-/**
+﻿/**
  * TripPhase / TripStep navigation helpers.
  */
 import type { TripPhase, TripStep } from '../../types/trip';

@@ -2,9 +2,22 @@
  * Travel Agent UI helpers — travel_phase is the single source of truth.
  */
 import type { TravelPhase, TravelState, UserProfile } from '../../types/travelState';
+import {
+  isTravelFactsComplete,
+  isTravelerProfileComplete,
+  isPanelProfileComplete,
+  isPanelsReviewed,
+  isReadyForItineraryGeneration,
+} from '@nauta/shared/profileGates';
+import {
+  shouldShowItineraryPanel as shouldShowStopsPanel,
+  shouldShowDayPanels,
+  shouldShowTripPlanningUI,
+  syncUiFromTravelState as sharedSyncUiFromTravelState,
+} from '@nauta/shared/travelUiFlags';
+import { TRAVEL_OPENER } from '@nauta/shared/constants';
 
-export const TRAVEL_OPENER =
-  'Ciao! Dimmi dove vorresti andare, per quanti giorni e in che periodo.';
+export { TRAVEL_OPENER };
 
 export {
   TRAVEL_PLAN_PROPOSAL_MESSAGE,
@@ -18,43 +31,19 @@ export {
   formatUserEchoAbovePanels,
 } from './travelerPresets';
 
+export {
+  isTravelFactsComplete,
+  isTravelerProfileComplete,
+  isPanelProfileComplete,
+  isPanelsReviewed,
+};
+
 export function travelPhaseFromState(ts: TravelState | null | undefined): TravelPhase {
   return ts?.travel_phase ?? 'phase1';
 }
 
-export function isTravelFactsComplete(profile: UserProfile | undefined): boolean {
-  if (!profile) return false;
-  const hasPeriod = Boolean(profile.period || (profile.periodStart && profile.periodEnd));
-  return Boolean(
-    profile.destination?.trim() &&
-      profile.durationDays &&
-      profile.durationDays > 0 &&
-      hasPeriod
-  );
-}
-
-export function isTravelerProfileComplete(profile: UserProfile | undefined): boolean {
-  if (!profile) return false;
-  return Boolean(profile.travelerType && profile.ageBand);
-}
-
-export function isPanelProfileComplete(profile: UserProfile | undefined): boolean {
-  if (!profile) return false;
-  return Boolean(
-    (profile.likes?.length ?? 0) >= 1 && profile.style?.trim() && profile.budget?.trim()
-  );
-}
-
-export function isPanelsReviewed(profile: UserProfile | undefined): boolean {
-  return profile?.panelsReviewed === true;
-}
-
 export function isProfileCompleteForTravel(profile: UserProfile | undefined): boolean {
-  return (
-    isTravelFactsComplete(profile) &&
-    isTravelerProfileComplete(profile) &&
-    isPanelProfileComplete(profile)
-  );
+  return isReadyForItineraryGeneration(profile);
 }
 
 /** Phase label shown above chat (replaces 4/6 intake). */
@@ -83,21 +72,11 @@ export function chatInputPlaceholder(profile?: UserProfile): string {
   return 'Scrivi un messaggio…';
 }
 
-export function shouldShowStopsPanel(ts: TravelState | null): boolean {
-  if (!ts || ts.locked || ts.travel_phase === 'phase4') return false;
-  return ts.itinerary.stops.length > 0;
+export function shouldShowStopsPanelFromState(ts: TravelState | null): boolean {
+  return shouldShowStopsPanel(ts);
 }
 
-export function shouldShowDayPanels(ts: TravelState | null): boolean {
-  if (!ts) return false;
-  return ts.travel_phase === 'phase4' && ts.locked && ts.itinerary.days.length > 0;
-}
-
-/** Planning accordions: after facts + traveler (preset may fill panels). */
-export function shouldShowTripPlanningUI(ts: TravelState | null): boolean {
-  if (!ts || ts.locked || ts.travel_phase === 'phase4') return false;
-  return isTravelFactsComplete(ts.profile) && isTravelerProfileComplete(ts.profile);
-}
+export { shouldShowDayPanels, shouldShowTripPlanningUI };
 
 /** @deprecated Use shouldShowTripPlanningUI */
 export function shouldShowProfilePanels(
@@ -108,12 +87,11 @@ export function shouldShowProfilePanels(
 }
 
 export function syncUiFromTravelState(ts: TravelState | null) {
-  const showItineraryPanel = shouldShowStopsPanel(ts);
+  const ui = sharedSyncUiFromTravelState(ts);
   return {
-    travelState: ts,
-    showItineraryPanel,
-    showDayPanels: shouldShowDayPanels(ts),
-    showProfilePanels: shouldShowTripPlanningUI(ts),
-    showTripPlanningUI: shouldShowTripPlanningUI(ts),
+    ...ui,
+    travelState: ui.travelState as TravelState | null,
   };
 }
+
+export { shouldShowStopsPanel as shouldShowItineraryPanel };

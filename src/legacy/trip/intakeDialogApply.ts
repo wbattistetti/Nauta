@@ -8,7 +8,7 @@ import {
   isIntakeComplete,
   INTAKE_FIELD_ORDER,
 } from './dialogOrchestrator';
-import { parseDurationDays } from '../onboardingStateMachine';
+import { parseDurationDays } from '../../lib/onboardingStateMachine';
 
 export type IntakeApplyResult = {
   draft: TripDraft;

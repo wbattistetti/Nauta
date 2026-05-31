@@ -24,7 +24,17 @@ describe('explainer traveler step', () => {
       period: 'metà giugno – metà luglio',
     };
     const reply = buildFallbackReply(state, []);
-    assert.match(reply, /Perfetto.*Italia.*30 giorni/i);
+    assert.match(reply, /Ok, allora.*30 giorni.*Italia/i);
     assert.match(reply, /solo.*coppia.*famiglia.*amici/i);
+  });
+
+  it('returns personalized ack when destination just set', () => {
+    const state = createInitialTravelState();
+    state.profile = { ...state.profile, destination: 'Cina' };
+    const reply = buildFallbackReply(state, ['Quanti giorni vuoi dedicare al viaggio?'], {
+      destinationJustSet: true,
+    });
+    assert.match(reply, /La Cina.*meta|foto|immagine|iconico/i);
+    assert.doesNotMatch(reply, /Quanti giorni/i);
   });
 });

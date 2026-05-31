@@ -8,9 +8,18 @@ export type ItineraryStatus = 'draft' | 'confirmed' | 'logistics_ready';
 
 export type StopCompatibility = 'salvabile' | 'borderline' | 'incompatibile';
 
+/** Named place in stop notes — links to Italian Wikipedia (server-validated). */
+export type StopPlaceLink = {
+  label: string;
+  wikiTitle: string;
+  /** Verified Wikipedia section anchor — optional. */
+  wikiSection?: string;
+  /** Human section title from Wikipedia — optional. */
+  sectionTitle?: string;
+};
+
 /** Universal taxonomy (8 sections). Legacy IDs normalized on the server. */
 export type TravelThemeId =
-  // 1 Paesaggi & Natura
   | 'nature'
   | 'mountains'
   | 'beach'
@@ -67,6 +76,7 @@ export type TravelStop = {
   themes: TravelThemeId[];
   primaryTheme: TravelThemeId;
   notes?: string;
+  placeLinks?: StopPlaceLink[];
   compatibility?: StopCompatibility;
 };
 
@@ -184,6 +194,8 @@ export type ReasonerOutput = {
 
 export type TravelMessageResponse = {
   reply: string;
+  /** Deferred chat line — client shows after first destination photo loads. */
+  followUpAfterPhotos?: string | null;
   travel_state: TravelState;
   travel_phase: TravelPhase;
   itinerary_status: ItineraryStatus;

@@ -2,7 +2,7 @@
  * localStorage fallback when Supabase trips table is unavailable.
  */
 import type { TripDraft, TripItinerary, TripPhase, TripRecord, TripStatus, TripStep } from '../types/trip';
-import { initialStep } from './trip/stepUtils';
+import { initialStep } from './travel/tripDbCompat';
 
 const STORE_KEY = 'nauta_trips_local_v2';
 

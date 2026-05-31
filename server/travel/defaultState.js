@@ -1,6 +1,18 @@
 /**
  * Initial TravelState and migration from legacy draft.
  */
+import {
+  isPanelProfileComplete as sharedIsPanelProfileComplete,
+  isTravelFactsComplete as sharedIsTravelFactsComplete,
+  isTravelerProfileComplete as sharedIsTravelerProfileComplete,
+  isPanelsReviewed as sharedIsPanelsReviewed,
+  isReadyForItineraryGeneration as sharedIsReadyForItineraryGeneration,
+  isProfileComplete as sharedIsProfileComplete,
+  shouldShowPreferencePanels as sharedShouldShowPreferencePanels,
+} from '@nauta/shared/profileGates';
+import {
+  shouldShowItineraryPanel as sharedShouldShowItineraryPanel,
+} from '@nauta/shared/travelUiFlags';
 import { themesFromPreferenze } from './themes.js';
 import { sanitizeUserProfile } from './profileSanitize.js';
 
@@ -52,50 +64,41 @@ export function migrateDraftToTravelState(draft) {
 }
 
 /** @param {import('./types.js').UserProfile} profile */
-/** Themes + style + budget from panels (not chat). */
 export function isPanelProfileComplete(profile) {
-  const p = sanitizeUserProfile(profile);
-  return Boolean(p.likes?.length >= 1 && p.style?.trim() && p.budget?.trim());
+  return sharedIsPanelProfileComplete(sanitizeUserProfile(profile));
 }
 
-/** Chat: companion + age band (after travel facts). */
+/** @param {import('./types.js').UserProfile} profile */
 export function isTravelerProfileComplete(profile) {
-  const p = sanitizeUserProfile(profile);
-  return Boolean(p.travelerType && p.ageBand);
+  return sharedIsTravelerProfileComplete(sanitizeUserProfile(profile));
 }
 
-/** Show preference panels after facts + traveler profile (even if itinerary exists). */
+/** @param {import('./types.js').UserProfile} profile */
 export function shouldShowPreferencePanels(profile) {
-  return isTravelFactsComplete(profile) && isTravelerProfileComplete(profile);
+  return sharedShouldShowPreferencePanels(sanitizeUserProfile(profile));
 }
 
-/** Itinerary accordion visible when stops exist and trip not locked. */
+/** @param {import('./types.js').TravelState} state */
 export function shouldShowItineraryPanel(state) {
-  if (!state || state.locked || state.travel_phase === 'phase4') return false;
-  return state.itinerary.stops.length > 0;
+  return sharedShouldShowItineraryPanel(state);
 }
 
-/** Chat: destination, days, period. */
+/** @param {import('./types.js').UserProfile} profile */
 export function isTravelFactsComplete(profile) {
-  const p = sanitizeUserProfile(profile);
-  const hasPeriod = Boolean(p.period || (p.periodStart && p.periodEnd));
-  return Boolean(p.destination && p.durationDays && p.durationDays > 0 && hasPeriod);
+  return sharedIsTravelFactsComplete(sanitizeUserProfile(profile));
 }
 
-/** Optional UX flag — not required for itinerary generation. */
+/** @param {import('./types.js').UserProfile} profile */
 export function isPanelsReviewed(profile) {
-  return sanitizeUserProfile(profile).panelsReviewed === true;
+  return sharedIsPanelsReviewed(sanitizeUserProfile(profile));
 }
 
-/** Preset-filled profile ready for planner (facts + traveler + panel fields). */
+/** @param {import('./types.js').UserProfile} profile */
 export function isReadyForItineraryGeneration(profile) {
-  return (
-    isTravelFactsComplete(profile) &&
-    isTravelerProfileComplete(profile) &&
-    isPanelProfileComplete(profile)
-  );
+  return sharedIsReadyForItineraryGeneration(sanitizeUserProfile(profile));
 }
 
+/** @param {import('./types.js').UserProfile} profile */
 export function isProfileComplete(profile) {
-  return isReadyForItineraryGeneration(profile);
+  return sharedIsProfileComplete(sanitizeUserProfile(profile));
 }

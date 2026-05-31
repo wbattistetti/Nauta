@@ -1,0 +1,51 @@
+{
+  "name": "@nauta/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./profileGates": {
+      "types": "./dist/profileGates.d.ts",
+      "import": "./dist/profileGates.js"
+    },
+    "./travelUiFlags": {
+      "types": "./dist/travelUiFlags.d.ts",
+      "import": "./dist/travelUiFlags.js"
+    },
+    "./normalizePlaceKey": {
+      "types": "./dist/normalizePlaceKey.d.ts",
+      "import": "./dist/normalizePlaceKey.js"
+    },
+    "./itineraryCopy": {
+      "types": "./dist/itineraryCopy.d.ts",
+      "import": "./dist/itineraryCopy.js"
+    },
+    "./deriveDraft": {
+      "types": "./dist/deriveDraft.d.ts",
+      "import": "./dist/deriveDraft.js"
+    },
+    "./constants": {
+      "types": "./dist/constants.d.ts",
+      "import": "./dist/constants.js"
+    },
+    "./travelFactsRecap": {
+      "types": "./dist/travelFactsRecap.d.ts",
+      "import": "./dist/travelFactsRecap.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.3"
+  }
+}

@@ -1,3 +1,4 @@
+/** @deprecated Legacy F1–F7 intake — POST /api/ai-chat. Use /api/travel instead. */
 /** POST /api/ai-chat — OpenAI dialog manager + log costi. */
 import { Router } from 'express';
 import { buildTripSystemPrompt } from '../prompts.js';

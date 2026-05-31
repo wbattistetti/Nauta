@@ -1,5 +1,5 @@
 import type { TripDraft } from '../../types/trip';
-import type { EditableField } from '../../lib/trip/correctionPrompts';
+import type { EditableField } from '../../legacy/trip/correctionPrompts';
 
 type Props = {
   draft: TripDraft;

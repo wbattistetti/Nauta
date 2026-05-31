@@ -5,9 +5,12 @@
   "scripts": {
     "dev": "node scripts/freePort.js && node --watch index.js",
     "start": "node scripts/freePort.js && node index.js",
-    "test": "node --test travel/**/*.test.js travel/*.test.js"
+    "test": "node --test travel/**/*.test.js travel/*.test.js",
+    "predev": "npm run build --prefix ../packages/shared",
+    "pretest": "npm run build --prefix ../packages/shared"
   },
   "dependencies": {
+    "@nauta/shared": "workspace:*",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",

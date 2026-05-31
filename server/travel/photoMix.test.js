@@ -2,24 +2,26 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   destinationSearchQuery,
+  isRejectedTravelPhotoText,
   normalizePlaceKey,
   stopCacheKey,
   stopSearchQuery,
 } from './photoQuery.js';
 import { resolvePlaceForSearch } from './placeAliases.js';
 import { buildTripHeroPhotos } from './photoMix.js';
+import { curatedDestinationPhotos } from './iconicDestinationPhotos.js';
 
 describe('photoQuery', () => {
   it('builds worldwide destination queries', () => {
-    assert.equal(destinationSearchQuery('Sicilia'), 'Sicilia travel landscape');
-    assert.equal(destinationSearchQuery('Alaska'), 'Alaska travel landscape');
-    assert.equal(destinationSearchQuery('  '), 'travel landscape');
+    assert.match(destinationSearchQuery('Sicilia'), /Sicilia.*landmark/i);
+    assert.match(destinationSearchQuery('Cina'), /Great Wall|China/i);
+    assert.match(destinationSearchQuery('  '), /landmark/i);
   });
 
   it('builds stop queries with region or destination context', () => {
-    assert.equal(stopSearchQuery('Cefalù', 'Sicilia', 'Italia'), 'Cefalù Sicilia travel');
-    assert.equal(stopSearchQuery('Yangon', undefined, 'Birmania'), 'Yangon Myanmar travel');
-    assert.equal(stopSearchQuery('Anchorage', 'Alaska', 'USA'), 'Anchorage Alaska travel');
+    assert.equal(stopSearchQuery('Cefalù', 'Sicilia', 'Italia'), 'Cefalù Sicilia landmark iconic tourism');
+    assert.equal(stopSearchQuery('Yangon', undefined, 'Birmania'), 'Yangon Myanmar landmark iconic tourism');
+    assert.equal(stopSearchQuery('Anchorage', 'Alaska', 'USA'), 'Anchorage Alaska landmark iconic tourism');
   });
 
   it('normalizes cache keys', () => {
@@ -29,7 +31,21 @@ describe('photoQuery', () => {
 
   it('maps Italian names to English for search', () => {
     assert.equal(resolvePlaceForSearch('Birmania'), 'Myanmar');
-    assert.equal(destinationSearchQuery('Birmania'), 'Myanmar travel landscape');
+    assert.match(destinationSearchQuery('Birmania'), /Myanmar/i);
+  });
+
+  it('rejects atlas and map-book photo captions', () => {
+    assert.equal(isRejectedTravelPhotoText('Old geography atlas on desk'), true);
+    assert.equal(isRejectedTravelPhotoText('Atlante geografico'), true);
+    assert.equal(isRejectedTravelPhotoText('Panorama of Yangon at sunset'), false);
+    assert.equal(isRejectedTravelPhotoText('Atlanta skyline'), false);
+  });
+
+  it('returns curated iconic photos for major destinations', () => {
+    const china = curatedDestinationPhotos('Cina');
+    assert.ok(china.length >= 3);
+    assert.match(china[0].alt, /Muraglia/i);
+    assert.ok(china[0].src.startsWith('https://'));
   });
 });
 

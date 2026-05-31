@@ -2,7 +2,9 @@
  * Trip persistence — Postgres via API when VITE_USE_LOCAL_API=true (no localStorage).
  */
 import type { ChatMessage, TripDraft, TripRecord, TripStatus, TripStep } from '../types/trip';
-import { initialStep, phaseFromStep } from './trip/stepUtils';
+import type { TravelState } from '../types/travelState';
+import { deriveDraftFromTravelState } from '@nauta/shared/deriveDraft';
+import { initialStep, phaseFromStep } from './travel/tripDbCompat';
 import { apiUrl, useLocalApi } from './apiClient';
 import { apiJson, readApiJson } from './apiJson';
 import { recordFromDraft } from './tripLocalStore';
@@ -35,11 +37,12 @@ export function tripMenuLabel(trip: TripRecord, allTrips: TripRecord[]): string 
 }
 
 function isEmptyTripStub(trip: TripRecord): boolean {
+  const ts = trip.travel_state as TravelState | undefined;
   const hasDest =
     trip.destination_normalized?.trim() ||
     trip.draft.destinationNormalized?.trim() ||
     trip.destination?.trim() ||
-    trip.travel_state?.profile?.destination?.trim();
+    ts?.profile?.destination?.trim();
   const msgCount = trip.chat_messages?.length ?? 0;
   return trip.status === 'in_progress' && !hasDest && msgCount <= 1;
 }
@@ -95,11 +98,13 @@ export async function fetchLatestInProgressTrip(): Promise<TripRecord | null> {
 }
 
 export function tripDisplayLabel(trip: TripRecord): string {
+  const ts = trip.travel_state as TravelState | undefined;
   const dest =
     trip.destination_normalized?.trim() ||
     trip.destination_raw?.trim() ||
     trip.destination?.trim() ||
-    trip.draft.destinationNormalized?.trim();
+    trip.draft.destinationNormalized?.trim() ||
+    ts?.profile?.destination?.trim();
   if (dest) return dest;
   if (trip.draft.periodNormalized?.trim()) return trip.draft.periodNormalized.trim();
   if (trip.period_raw?.trim()) return trip.period_raw.trim();
@@ -125,6 +130,7 @@ export async function fetchTrip(id: string): Promise<TripRecord | null> {
   }
 }
 
+/** @deprecated Legacy F1–F7 PATCH path — unused by Travel Agent UI. */
 export async function updateTrip(
   id: string,
   draft: TripDraft,
@@ -145,30 +151,27 @@ export async function updateTrip(
   });
 }
 
+/** Derive TripDraft from travel_state (canonical) with legacy column fallbacks. */
 export function tripRecordToDraft(record: TripRecord): TripDraft {
+  const derived = deriveDraftFromTravelState(record.travel_state as TravelState | undefined, {
+    draft: record.draft,
+    itinerary: record.itinerary ?? record.draft.itinerary ?? null,
+  });
+
   return {
-    ...record.draft,
+    ...(derived as TripDraft),
     destinationRaw: record.draft.destinationRaw ?? record.destination_raw ?? undefined,
-    destinationNormalized:
-      record.draft.destinationNormalized ??
-      record.destination_normalized ??
-      record.destination ??
-      undefined,
     durationRaw: record.draft.durationRaw ?? record.duration_raw ?? undefined,
-    durationDays: record.draft.durationDays ?? record.duration_days ?? undefined,
     periodRaw: record.draft.periodRaw ?? record.period_raw ?? undefined,
-    periodNormalized: record.draft.periodNormalized ?? undefined,
     durationNormalized: record.draft.durationNormalized ?? undefined,
-    itinerary: record.draft.itinerary ?? record.itinerary ?? undefined,
   };
 }
 
 export function inferStepFromRecord(record: TripRecord): TripStep {
-  const ts = record.travel_state;
-  if (ts && typeof ts === 'object' && (ts as { travel_phase?: string }).travel_phase) {
-    const phase = (ts as { travel_phase: string }).travel_phase;
-    if (phase === 'phase4') return 'F5_render';
-    if (phase === 'phase2' || phase === 'phase3') return 'F3_explain';
+  const ts = record.travel_state as TravelState | undefined;
+  if (ts?.travel_phase) {
+    if (ts.travel_phase === 'phase4') return 'F5_render';
+    if (ts.travel_phase === 'phase2' || ts.travel_phase === 'phase3') return 'F3_explain';
     return 'intake_dialog';
   }
   if (record.itinerary_status === 'logistics_ready') return 'F5_render';

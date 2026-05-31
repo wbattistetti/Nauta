@@ -1,5 +1,5 @@
-/**
- * Applies AI output for post-intake phases (F3–F7). Intake uses intakeDialogApply.ts.
+﻿/**
+ * Applies AI output for post-intake phases (F3ÔÇôF7). Intake uses intakeDialogApply.ts.
  */
 import type { AiTripResult, TripDraft, TripItinerary, TripStep } from '../../types/trip';
 import { canAdvancePostIntake } from './tripValidate';
@@ -35,7 +35,7 @@ function mergeNormalized(draft: TripDraft, n: AiTripResult['normalized']): TripD
   };
 }
 
-/** Applies AI output for F3–F7 steps. */
+/** Applies AI output for F3ÔÇôF7 steps. */
 export function applyTripTurn(
   step: TripStep,
   userText: string,

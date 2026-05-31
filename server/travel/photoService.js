@@ -1,10 +1,12 @@
 /**
- * Travel hero photo resolver — Unsplash search with cache and generic fallback.
+ * Travel hero photo resolver — iconic curated sets + Unsplash/Wikimedia search.
  */
 import { cacheGet, cacheSet } from './photoCache.js';
 import { buildTripHeroPhotos } from './photoMix.js';
+import { curatedDestinationPhotos } from './iconicDestinationPhotos.js';
+import { curatedStopPhotos } from './iconicStopPhotos.js';
 import {
-  destinationSearchQuery,
+  destinationSearchQueries,
   normalizePlaceKey,
   stopCacheKey,
   stopSearchQuery,
@@ -14,94 +16,82 @@ import { searchWikimediaPhotos } from './wikimediaClient.js';
 
 /** @typedef {{ id: string, alt: string, src: string, photographer?: string, photographerUrl?: string }} TravelPhoto */
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v8';
 
 const DESTINATION_COUNT = 10;
 const STOP_COUNT = 8;
 
-/** Generic fallback when API is unavailable or returns no results. */
-const GENERIC_FALLBACK = [
-  {
-    id: 'generic-1',
-    alt: 'Paesaggio di viaggio',
-    src: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1200&q=80&auto=format&fit=crop',
-  },
-  {
-    id: 'generic-2',
-    alt: 'Strada panoramica',
-    src: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=1200&q=80&auto=format&fit=crop',
-  },
-  {
-    id: 'generic-3',
-    alt: 'Mare e cielo',
-    src: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80&auto=format&fit=crop',
-  },
-  {
-    id: 'generic-4',
-    alt: 'Montagna e luce',
-    src: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80&auto=format&fit=crop',
-  },
-];
-
 /**
- * @param {string} placeLabel
- * @param {number} count
- * @returns {TravelPhoto[]}
+ * @param {TravelPhoto[]} photos
+ * @param {TravelPhoto} photo
  */
-function genericFallback(placeLabel, count) {
-  const label = placeLabel.trim() || 'Viaggio';
-  return GENERIC_FALLBACK.slice(0, count).map((photo, i) => ({
-    ...photo,
-    id: `${normalizePlaceKey(label)}-fallback-${i + 1}`,
-    alt: `${label} · ${photo.alt}`,
-  }));
+function pushUnique(photos, photo) {
+  if (!photo?.id || photos.some((p) => p.id === photo.id)) return;
+  photos.push(photo);
 }
 
 /**
  * @param {string} cacheKey
- * @param {string} query
  * @param {string} placeLabel
  * @param {number} count
- * @returns {Promise<{ photos: TravelPhoto[], source: 'live' | 'fallback' }>}
+ * @param {string[]} searchQueries
+ * @param {import('./photoService.js').TravelPhoto[]} [seedCurated]
+ * @returns {Promise<{ photos: TravelPhoto[], source: 'live' | 'curated' | 'fallback' }>}
  */
-async function fetchPhotoSet(cacheKey, query, placeLabel, count) {
+async function fetchPhotoSet(cacheKey, placeLabel, count, searchQueries, seedCurated = []) {
   const fullKey = `${CACHE_VERSION}:${cacheKey}`;
   const cached = cacheGet(fullKey);
-  if (cached) return /** @type {{ photos: TravelPhoto[], source: 'live' | 'fallback' }} */ (cached);
+  if (cached) return /** @type {{ photos: TravelPhoto[], source: 'live' | 'curated' | 'fallback' }} */ (cached);
 
+  /** @type {TravelPhoto[]} */
   let photos = [];
-  let source = /** @type {'live' | 'fallback'} */ ('fallback');
+  let source = /** @type {'live' | 'curated' | 'fallback'} */ ('fallback');
 
-  if (process.env.UNSPLASH_ACCESS_KEY?.trim()) {
-    try {
-      const result = await searchUnsplashPhotos(query, count);
-      if (result.photos.length) {
-        photos = result.photos.slice(0, count);
-        source = 'live';
+  for (const curated of seedCurated) {
+    pushUnique(photos, curated);
+    if (photos.length >= count) break;
+  }
+  if (photos.length) source = 'curated';
+
+  for (const curated of curatedDestinationPhotos(placeLabel)) {
+    pushUnique(photos, curated);
+    if (photos.length >= count) break;
+  }
+  if (photos.length) source = 'curated';
+
+  if (process.env.UNSPLASH_ACCESS_KEY?.trim() && photos.length < count) {
+    for (const query of searchQueries) {
+      if (photos.length >= count) break;
+      try {
+        const result = await searchUnsplashPhotos(query, count - photos.length);
+        for (const photo of result.photos) {
+          pushUnique(photos, photo);
+          if (photos.length >= count) break;
+        }
+        if (result.photos.length) source = 'live';
+      } catch (err) {
+        console.warn('[photos] unsplash', query, err instanceof Error ? err.message : err);
       }
-    } catch (err) {
-      console.warn('[photos] unsplash', query, err instanceof Error ? err.message : err);
     }
   }
 
-  if (!photos.length) {
-    try {
-      const wiki = await searchWikimediaPhotos(query, count);
-      if (wiki.photos.length) {
-        photos = wiki.photos.slice(0, count);
-        source = 'live';
+  if (photos.length < count) {
+    for (const query of searchQueries) {
+      if (photos.length >= count) break;
+      try {
+        const wiki = await searchWikimediaPhotos(query, count - photos.length);
+        for (const photo of wiki.photos) {
+          pushUnique(photos, photo);
+          if (photos.length >= count) break;
+        }
+        if (wiki.photos.length) source = 'live';
+      } catch (err) {
+        console.warn('[photos] wikimedia', query, err instanceof Error ? err.message : err);
       }
-    } catch (err) {
-      console.warn('[photos] wikimedia', query, err instanceof Error ? err.message : err);
     }
   }
 
-  if (!photos.length) {
-    photos = genericFallback(placeLabel, count);
-    source = 'fallback';
-  }
-
-  const payload = { photos, source };
+  const payload = { photos: photos.slice(0, count), source };
   cacheSet(fullKey, payload);
   return payload;
 }
@@ -113,12 +103,12 @@ async function fetchPhotoSet(cacheKey, query, placeLabel, count) {
 export async function resolveDestinationPhotos(destination) {
   const place = String(destination ?? '').trim();
   if (!place) {
-    return { photos: genericFallback('Viaggio', DESTINATION_COUNT), source: 'fallback' };
+    return { photos: [], source: 'fallback' };
   }
 
   const cacheKey = `dest:${normalizePlaceKey(place)}`;
-  const query = destinationSearchQuery(place);
-  return fetchPhotoSet(cacheKey, query, place, DESTINATION_COUNT);
+  const queries = destinationSearchQueries(place);
+  return fetchPhotoSet(cacheKey, place, DESTINATION_COUNT, queries);
 }
 
 /**
@@ -130,12 +120,13 @@ export async function resolveDestinationPhotos(destination) {
 export async function resolveStopPhotos(stopName, region, destination) {
   const name = String(stopName ?? '').trim();
   if (!name) {
-    return { photos: genericFallback('Tappa', STOP_COUNT), source: 'fallback' };
+    return { photos: [], source: 'fallback' };
   }
 
   const cacheKey = `stop:${stopCacheKey(name, region)}`;
   const query = stopSearchQuery(name, region, destination);
-  return fetchPhotoSet(cacheKey, query, name, STOP_COUNT);
+  const seed = curatedStopPhotos(name, region, destination);
+  return fetchPhotoSet(cacheKey, name, STOP_COUNT, [query, `${query} landmark`], seed);
 }
 
 /**

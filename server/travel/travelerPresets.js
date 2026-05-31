@@ -7,7 +7,7 @@ import { dirname, join } from 'path';
 import { sanitizeUserProfile } from './profileSanitize.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const configPath = join(__dirname, '../../src/config/travelerPresets.json');
+const configPath = join(__dirname, '../../packages/shared/config/travelerPresets.json');
 
 /** @type {{ version: number, defaultPresetId: string, rules: object[], defaultPreset: object }} */
 let config;
